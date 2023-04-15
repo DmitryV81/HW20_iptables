@@ -154,3 +154,4 @@ Last login: Sat Apr 15 20:59:12 2023 from 192.168.50.1
   when: (ansible_hostname == "inetRouter2")
 ```
 
+![Redirect port](https://github.com/DmitryV81/HW20_iptables/blob/main/pictures/nginx.png)
