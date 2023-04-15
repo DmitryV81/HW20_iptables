@@ -1,0 +1,36 @@
+---
+- name: disable default route on centralServer
+  lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth0
+    line: DEFROUTE=no 
+  when: (ansible_hostname == "centralServer")
+
+- name: add default gateway for centralServer
+  lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+    line: GATEWAY=192.168.0.1 
+  when: (ansible_hostname == "centralServer")
+
+- name: Install epel-release
+  yum:
+    name: epel-release
+    state: latest
+
+- name: install nginx
+  yum:
+    name: nginx
+    state: present
+
+- name: nginx service state
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: reload network centralServer
+  service:
+    name: network
+    state: restarted
+  when: (ansible_hostname == "centralServer")
+
+...

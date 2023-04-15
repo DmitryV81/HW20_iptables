@@ -1,0 +1,42 @@
+# sample configuration for iptables service
+# you can edit this manually or use system-config-firewall
+# please do not ask us to add additional ports/services to this default configuration
+*filter
+:INPUT DROP [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+-N CHAIN-1
+-A CHAIN-1 -m recent --name TRY1 --remove
+-A CHAIN-1 -m recent --name TRY2 --set
+-A CHAIN-1 -j LOG --log-prefix "CHAIN-1: "
+
+-N CHAIN-2
+-A CHAIN-2 -m recent --name TRY2 --remove
+-A CHAIN-2 -m recent --name TRY3 --set
+-A CHAIN-2 -j LOG --log-prefix "CHAIN-2: "
+
+-A INPUT -m recent --update --name TRY1
+
+-A INPUT -p tcp --dport 6543 -m recent --name TRY1 --set
+-A INPUT -p tcp --dport 5432 -m recent --rcheck --seconds 10 --name TRY1 -j CHAIN-1
+-A INPUT -p tcp --dport 4321 -m recent --rcheck --seconds 10 --name TRY2 -j CHAIN-2
+
+
+-A INPUT -p tcp --dport 22 -m recent --rcheck --seconds 10 --name TRY3 -j ACCEPT
+
+-A INPUT -p tcp --dport 22 -m state --state NEW -j DROP
+
+COMMIT
+*nat
+:PREROUTING ACCEPT [1:161]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A POSTROUTING ! -d 192.168.0.0/16 -o eth0 -j MASQUERADE
+COMMIT
+
+

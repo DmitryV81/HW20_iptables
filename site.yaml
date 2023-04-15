@@ -1,0 +1,15 @@
+---
+- name: Setting Routers
+  hosts: inetRouter centralRouter inetRouter2
+#  hosts: centralRouter inetRouter2
+  become: true
+  roles:
+  - routers
+
+- name: Setting Servers
+  hosts: centralServer
+  become: true
+  roles:
+  - servers
+
+...

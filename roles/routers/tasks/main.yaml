@@ -1,0 +1,125 @@
+---
+- name: Set up NAT on inetRouter
+  block:
+    - name: set up route on inetRouter eth1
+      template:
+        src: inetRouter_route_eth1.j2
+        dest: /etc/sysconfig/network-scripts/route-eth1
+        owner: root
+        group: root
+        mode: 0755
+      notify: restart networking
+
+    - name: config ssh
+      shell:
+        sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
+
+    - name: install iptables
+      yum:
+        name:
+        - iptables
+        - iptables-services
+        state: present
+        update_cache: true
+      
+    - name: copy iptables config
+      template: 
+        src: iptables
+        dest: /etc/sysconfig/iptables
+        owner: root
+        group: root
+        mode: 0600
+
+    - name: start and enable iptables service
+      service:
+        name: iptables
+        state: restarted
+        enabled: true
+  when: (ansible_hostname == "inetRouter")
+
+- name: set up forward packages across routers
+  sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  when: "'routers' in group_names"
+
+- name: disable default route on centralRouter
+  lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth0
+    line: DEFROUTE=no 
+  when: (ansible_hostname == "centralRouter")
+
+- name: add default gateway for centralRouter
+  lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+    line: GATEWAY=192.168.255.1 
+  when: (ansible_hostname == "centralRouter")
+
+- name: set up route on centralRouter eth1 (def route)
+  template:
+    src: centralRouter_route_eth1.j2
+    dest: /etc/sysconfig/network-scripts/route-eth1
+    owner: root
+    group: root
+    mode: 0755
+  when: (ansible_hostname == "centralRouter")
+
+- name: disable default route on inetRouter2
+  lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth0
+    line: DEFROUTE=no 
+  when: (ansible_hostname == "inetRouter2")
+
+- name: add default gateway for inetRouter2
+  lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+    line: GATEWAY=192.168.255.9 
+  when: (ansible_hostname == "inetRouter2")
+
+- name: enable iptables NAT/DNAT on inetRouter2
+  iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    destination_port: "8080"
+    jump: DNAT
+    to_destination: 192.168.0.2:80
+  when: (ansible_hostname == "inetRouter2")
+  
+- name: add postrouting rule on inetRouter2
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    jump: MASQUERADE
+  when: (ansible_hostname == "inetRouter2")
+  
+- name: Restart network on inetRouter
+  service:
+    name: network
+    state: restarted
+  when: (ansible_hostname == "inetRouter")
+
+- name: Restart network on inetRouter2
+  service:
+    name: network
+    state: restarted
+  when: (ansible_hostname == "inetRouter2")
+
+- name: Restart network on centralRouter
+  service:
+    name: network
+    state: restarted
+  when: (ansible_hostname == "centralRouter")
+
+- name: install telnet on centralRouter
+  yum:
+    name:
+      telnet
+    state: present
+  when: (ansible_hostname == "centralRouter")
+...
