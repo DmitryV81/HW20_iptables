@@ -26,7 +26,7 @@ server - centralServer
 
 router - inetRouter, centralRouter, inetRouter2
 
-В результате получаем на ВМ inetRouter правила iptables реализующие port knocking:
+В результате получаем на ВМ inetRouter правила iptables реализующие port knocking (правильная последовательность 6543-5432-4321):
 
 ```
 [vagrant@inetRouter ~]$ sudo cat /etc/sysconfig/iptables
